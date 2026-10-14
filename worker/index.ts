@@ -81,8 +81,7 @@ export default {
   // Cloudflare calls this on the schedule in wrangler.jsonc (triggers.crons). A thrown error
   // shows as a failed run in the dashboard, which is what we want.
   scheduled: async (_event, env, ctx) => {
-    ctx.waitUntil(
-      clearOldCarts(env.DB, Date.now()).then((n) => logEvent("carts_cleared", { deleted: n })),
-    );
+    const deleted = await clearOldCarts(env.DB, Date.now());
+    logEvent("carts_cleared", { deleted });
   },
 } satisfies ExportedHandler<Env>;
