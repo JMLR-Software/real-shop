@@ -22,6 +22,7 @@ export type Session = NonNullable<Awaited<ReturnType<Auth["api"]["getSession"]>>
 export type App = { Bindings: Env; Variables: { auth: Auth; session: Session } };
 
 export const requireSession: MiddlewareHandler<App> = async (c, next) => {
+  c.set("auth", createAuth(c.env));
   const session = await c.var.auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) return fail(c, "Not signed in", 401);
   c.set("session", session);

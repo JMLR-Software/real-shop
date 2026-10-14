@@ -16,7 +16,9 @@ const app = new Hono<App>();
 // Before the auth middleware: Stripe's call carries a signature, not a session, so it never builds Better Auth.
 app.route("/api/stripe/webhook", webhook);
 
-app.use("/api/*", async (c, next) => {
+// Only the routes that need it build Better Auth: building it starts a background schema check
+// on D1, which a request for an unknown route would leave running after the reply.
+app.use("/api/auth/*", async (c, next) => {
   c.set("auth", createAuth(c.env));
   await next();
 });
@@ -44,17 +46,6 @@ app.get("/api/orders", requireSession, async (c) => {
     `select id, stripeSessionId, amountCents, status, createdAt from "order" where userId = ? order by createdAt desc`,
   ).bind(c.var.session.user.id).all();
   return ok(c, results);
-});
-
-// PLANTED BUG (phase 1): the browser says "I paid" and we believe it. Anyone can call this with
-// any string. Phase-1's fix deletes this route; the webhook is the only thing that writes an order.
-app.post("/api/orders/confirm", requireSession, async (c) => {
-  const body = await c.req.json().catch(() => null);
-  const sessionId = typeof body?.sessionId === "string" ? body.sessionId : "";
-  if (!sessionId) return fail(c, "Which session?", 400);
-  await c.env.DB.prepare(`insert or ignore into "order" (id, userId, stripeSessionId, amountCents, status, createdAt) values (?, ?, ?, 0, 'paid', ?)`)
-    .bind(`ord_${crypto.randomUUID()}`, c.var.session.user.id, sessionId, Date.now()).run();
-  return ok(c, { confirmed: true });
 });
 
 // Better Auth's own routes. Every reply is rewrapped into the envelope so the browser never sees its raw body.
