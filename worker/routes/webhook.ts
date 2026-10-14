@@ -31,6 +31,11 @@ webhook.post("/", async (c) => {
   if (session.payment_status !== "paid") return ignore("not paid");
   const userId = session.client_reference_id;
   if (!userId) return ignore("no client_reference_id");
+  // A session for someone this database does not know (another environment, a `stripe trigger`
+  // with a made-up id) is not ours: without this, the order's foreign key fails, Stripe gets a
+  // 500 and retries for days.
+  const known = await c.env.DB.prepare(`select 1 from "user" where id = ?`).bind(userId).first();
+  if (!known) return ignore("unknown user");
   const items = parseOrderItems(session.metadata?.items);
   if (!items) return ignore("no items snapshot");
   const amountCents = session.amount_total ?? cartTotalCents(items.map((i) => ({ ...i, name: i.productId })));

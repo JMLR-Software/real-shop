@@ -128,6 +128,15 @@ describe("stripe webhook", () => {
     await expectNothingWritten(cookie);
   });
 
+  // Seen live 2026-10-14: a `stripe trigger` with a made-up client_reference_id hit the order
+  // table's foreign key, answered 500, and Stripe would have retried it for days.
+  it("answers 200 and writes nothing for a client_reference_id that is no user", async () => {
+    const { cookie } = await signUpWithCart();
+    const res = await request("/api/stripe/webhook", await signed(completed("not-a-user-id")));
+    expect(res.status).toBe(200);
+    await expectNothingWritten(cookie);
+  });
+
   it("answers 200 and writes nothing for a session without an items snapshot", async () => {
     const { cookie, userId } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(completed(userId, { metadata: {} })));
