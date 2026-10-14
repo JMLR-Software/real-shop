@@ -22,3 +22,5 @@ One dated line per surprise: what a doc said versus what happened, a limit hit, 
 - 2026-10-13: Removed `--passWithNoTests` from `test` and `test:unit` now that `test/unit/cart-rules.test.ts` and `src/lib/cart-actions.test.ts` exist (deferred from Task 2).
 - 2026-10-13: The RED run of `test/cart.test.ts` against the placeholder cart did not give clean assertion failures: the Workers pool aborted with "Failed to pop isolated storage stack frame" (D1 `-shm` file) and a spurious Better Auth "Missing tables" log. With the real route in, the same file runs clean (4 pass, 1 planted failure), so the crash came from the 404/405 path on the placeholder, not from the tests.
 - 2026-10-13: As in the products test, `res.json()` is `unknown`, so `test/cart.test.ts` casts replies through a small `reply()` helper to typecheck.
+- 2026-10-13: `pnpm test` chained the unit and worker runs with `&&`, so on main the planted unit failure hid the worker half (1 failure shown, not 3). `scripts/test-all.mjs` now runs both and exits 1 if either fails.
+- 2026-10-13: Intended for now: the Add button posts qty 1 and POST replaces the line, so adding twice stays at 1.
