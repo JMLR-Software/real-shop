@@ -16,10 +16,29 @@ one room per commit. Tag `phase-0` is the starter the escape plan's lesson 2 mak
 ## Test it
 
     pnpm test        # on main this is red on purpose; see the list below
-    pnpm e2e         # needs a real Stripe test key in .dev.vars and `pnpm dev` running
-    pnpm smoke [base-url]   # health, sign-up, cart, checkout, then `stripe trigger`; default http://localhost:8787
+    pnpm e2e         # the whole flow in a browser, through Stripe's test card; needs the two lines below
+    pnpm smoke [base-url]   # health, sign-up, cart, checkout, a triggered payment, the order; default http://localhost:8787
 
-The end-to-end flow has not yet been run against a live Stripe test key (as of 2026-10-14). It needs `.dev.vars` with `sk_test_` and `whsec_`, `pnpm dev`, and `stripe listen --forward-to localhost:8787/api/stripe/webhook`.
+The end-to-end test and the smoke script talk to real Stripe, in test mode. Once, before the first run:
+
+1. In the Stripe dashboard, test mode, Developers → API keys: copy the secret key (`sk_test_...`)
+   into `STRIPE_SECRET_KEY` in `.dev.vars`.
+2. Install the Stripe CLI and run `stripe login`.
+3. `pnpm exec playwright install chromium` for the end-to-end test's browser.
+
+Then, every time, in two terminals:
+
+    stripe listen --forward-to localhost:8787/api/stripe/webhook   # prints a whsec_...; put it in .dev.vars as STRIPE_WEBHOOK_SECRET
+    pnpm dev                                                        # start (or restart) after .dev.vars has the whsec_
+
+If the CLI is logged into more than one Stripe account, use the account the `sk_test_` key came from:
+`stripe listen --project-name "<profile>"` and `STRIPE_PROJECT="<profile>" pnpm smoke`
+(`stripe config --list` shows the profiles). If port 8787 is taken, run everything on another one:
+`pnpm build && wrangler dev --port 8799 --local-upstream localhost:8799 --var BETTER_AUTH_URL:http://localhost:8799 --var SITE_URL:http://localhost:8799`,
+then `E2E_URL=http://localhost:8799 pnpm e2e` and `pnpm smoke http://localhost:8799`.
+
+Last green run against live Stripe: 2026-10-14. Stripe's hosted page changes; if `pnpm e2e` stops
+at the card form, the field ids in `e2e/checkout.spec.ts` are the first thing to check.
 
 ### Red on `main`, on purpose
 

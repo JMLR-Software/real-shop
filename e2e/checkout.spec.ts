@@ -17,11 +17,19 @@ test("sign up, add, pay with the test card, see the order", async ({ page }) => 
   await page.goto("/cart/");
   await page.click("#checkout");
   await page.waitForURL(/checkout\.stripe\.com/);
-  await page.fill("#email", email, { timeout: 5_000 }).catch(() => {});
+  await page.fill("#email", email);
+  // The payment methods are an accordion (Card, Cash App, Klarna...) and the card fields
+  // exist only once Card is chosen. Its button has no clickable box of its own (a pointer
+  // click lands on a cover element), so the click is dispatched to it. Seen 2026-10-14.
+  await page.getByTestId("card-accordion-item-button").dispatchEvent("click");
   await page.fill("#cardNumber", "4242 4242 4242 4242");
   await page.fill("#cardExpiry", "12 / 34");
   await page.fill("#cardCvc", "123");
   await page.fill("#billingName", "E2E");
+  await page.fill("#billingPostalCode", "12345");
+  // "Save my info" (Link) would then ask for a phone number; leave it off.
+  const saveWithLink = page.locator("#enableStripePass");
+  if (await saveWithLink.isChecked()) await saveWithLink.uncheck();
   await page.getByTestId("hosted-payment-submit-button").click();
   await page.waitForURL("**/checkout/done/**");
 
