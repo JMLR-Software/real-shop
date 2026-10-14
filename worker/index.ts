@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createAuth, requireSession, type App } from "./auth";
 import type { Env } from "./env";
 import { ConfigError, fail, ok } from "./envelope";
@@ -15,13 +16,32 @@ app.use("/api/*", async (c, next) => {
 app.get("/api/health", (c) => ok(c, { up: true }));
 app.route("/api/products", products);
 
-// Better Auth's own routes. Its errors are rewrapped so the browser never sees its raw body.
+// Better Auth's own routes. Every reply is rewrapped into the envelope so the browser never sees its raw body.
+const AUTH_ERRORS: Record<number, string> = {
+  400: "Check the email and password",
+  403: "Request blocked: wrong origin",
+  422: "That email already has an account",
+  429: "Too many tries; wait a minute",
+};
+
+function authErrorMessage(status: number, path: string): string {
+  if (status === 401) {
+    const isCredentialPath = path.startsWith("/api/auth/sign-in/") || path.startsWith("/api/auth/sign-up/");
+    return isCredentialPath ? "Wrong email or password" : "Not signed in";
+  }
+  return AUTH_ERRORS[status] ?? "Something went wrong";
+}
+
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const res = await c.var.auth.handler(c.req.raw);
-  if (res.status === 401 || res.status === 400) {
-    return fail(c, res.status === 401 ? "Wrong email or password" : "Check the email and password", res.status);
-  }
-  return res;
+  if (!res.ok) return fail(c, authErrorMessage(res.status, c.req.path), res.status as ContentfulStatusCode);
+  // Built by hand, not c.json, so Better Auth's Set-Cookie header survives.
+  const text = await res.text();
+  const headers = new Headers(res.headers);
+  headers.set("content-type", "application/json");
+  headers.delete("content-length");
+  const data = text ? JSON.parse(text) : null;
+  return new Response(JSON.stringify({ ok: true, data, error: null }), { status: res.status, headers });
 });
 
 // A placeholder cart so sign-in is testable now; Task 4 replaces it.

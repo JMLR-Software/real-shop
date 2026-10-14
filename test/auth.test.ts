@@ -23,6 +23,22 @@ describe("sign-in", () => {
     await request("/api/auth/sign-up/email", json(person));
     const res = await request("/api/auth/sign-in/email", json({ email: person.email, password: "nope-nope-nope" }));
     expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ ok: false, data: null, error: "Wrong email or password" });
+  });
+
+  it("duplicate sign-up is 422 with a plain message", async () => {
+    await request("/api/auth/sign-up/email", json(person));
+    const res = await request("/api/auth/sign-up/email", json(person));
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({ ok: false, data: null, error: "That email already has an account" });
+  });
+
+  it("sign-up answers in the envelope and still sets the cookie", async () => {
+    const res = await request("/api/auth/sign-up/email", json(person));
+    const body = (await res.json()) as { ok: boolean; data: { user: { email: string } } };
+    expect(body.ok).toBe(true);
+    expect(body.data.user.email).toBe(person.email);
+    expect(() => cookieOf(res)).not.toThrow();
   });
 
   it("signs out, then 401 again", async () => {
