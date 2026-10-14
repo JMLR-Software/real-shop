@@ -22,5 +22,22 @@
   // Secrets (wrangler secret put NAME --env <env>; .dev.vars locally):
   // BETTER_AUTH_SECRET, STRIPE_SECRET_KEY (sk_test_ only), STRIPE_WEBHOOK_SECRET.
   "workers_dev": true,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "env": {
+    "staging": {
+      // PLANTED BUG (phase 1): staging and production share one database and one bucket.
+      // A test order on staging shows up in the real shop's orders.
+      "d1_databases": [{ "binding": "DB", "database_name": "hard-three-shop", "database_id": "REPLACE-WITH-WRANGLER-D1-CREATE-OUTPUT", "migrations_dir": "migrations" }],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "hard-three-shop-files" }],
+      "vars": { "BETTER_AUTH_URL": "https://hard-three-shop-staging.jyi468.workers.dev", "SITE_URL": "https://hard-three-shop-staging.jyi468.workers.dev" },
+      "workers_dev": true
+    },
+    "production": {
+      "d1_databases": [{ "binding": "DB", "database_name": "hard-three-shop", "database_id": "REPLACE-WITH-WRANGLER-D1-CREATE-OUTPUT", "migrations_dir": "migrations" }],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "hard-three-shop-files" }],
+      "vars": { "BETTER_AUTH_URL": "https://hard-three-shop.jmlr.dev", "SITE_URL": "https://hard-three-shop.jmlr.dev" },
+      "routes": [{ "pattern": "hard-three-shop.jmlr.dev", "custom_domain": true }],
+      "workers_dev": false
+    }
+  }
 }
