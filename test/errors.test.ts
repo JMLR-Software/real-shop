@@ -6,8 +6,15 @@ import { ConfigError } from "../worker/envelope";
 const callWithBrokenDb = (error: Error) => {
   const brokenEnv = {
     ...env,
+    // Shaped like a D1 database so Better Auth's adapter accepts it; every call throws.
     DB: {
       prepare() {
+        throw error;
+      },
+      batch() {
+        throw error;
+      },
+      exec() {
         throw error;
       },
     },

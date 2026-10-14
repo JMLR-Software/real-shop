@@ -21,6 +21,7 @@ export default defineWorkersConfig(async () => {
             compatibilityDate: "2026-03-10",
             bindings: {
               TEST_MIGRATIONS: migrations,
+              BETTER_AUTH_URL: "http://shop.test",
               BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",
               STRIPE_SECRET_KEY: "sk_test_fake",
               STRIPE_WEBHOOK_SECRET: "whsec_test_fake",
