@@ -11,7 +11,8 @@ check("health", health.ok === true);
 
 const up = await fetch(`${base}/api/auth/sign-up/email`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Smoke", email, password: "a-long-enough-password" }) });
 check("sign-up 200", up.status === 200);
-const cookie = (up.headers.get("set-cookie") ?? "").split(";")[0];
+const cookie = (up.headers.getSetCookie()[0] ?? "").split(";")[0];
+check("session cookie", cookie.includes("="));
 
 const add = await fetch(`${base}/api/cart`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ productId: "candle", qty: 1 }) });
 check("cart add", (await add.json()).ok === true);
@@ -20,6 +21,8 @@ const co = await fetch(`${base}/api/checkout`, { method: "POST", headers: { "con
 const coBody = await co.json();
 check("checkout url", typeof coBody.data?.url === "string" && coBody.data.url.includes("stripe.com"));
 
+// This only proves the CLI ran. A real check needs `--override checkout_session:client_reference_id=<user id>`
+// plus `metadata` once the live run (card #68) can verify the override syntax.
 try {
   execSync("stripe trigger checkout.session.completed", { stdio: "ignore" });
   check("stripe trigger ran", true);

@@ -17,7 +17,7 @@ test("sign up, add, pay with the test card, see the order", async ({ page }) => 
   await page.goto("/cart/");
   await page.click("#checkout");
   await page.waitForURL(/checkout\.stripe\.com/);
-  await page.fill("#email", email).catch(() => {});
+  await page.fill("#email", email, { timeout: 5_000 }).catch(() => {});
   await page.fill("#cardNumber", "4242 4242 4242 4242");
   await page.fill("#cardExpiry", "12 / 34");
   await page.fill("#cardCvc", "123");
@@ -26,5 +26,9 @@ test("sign up, add, pay with the test card, see the order", async ({ page }) => 
   await page.waitForURL("**/checkout/done/**");
 
   await page.goto("/account/");
-  await expect(page.locator("li")).toContainText(["paid"], { timeout: 20_000 });
+  // The webhook writes the order a moment after the redirect, so reload until it shows.
+  await expect.poll(async () => {
+    await page.reload();
+    return (await page.locator("li").allTextContents()).join(" ");
+  }, { timeout: 20_000 }).toContain("paid");
 });
