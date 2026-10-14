@@ -35,6 +35,13 @@ const completed = (userId: string, fields: SessionFields = {}, sessionId = "cs_t
   sessionEvent("checkout.session.completed", { client_reference_id: userId, ...fields }, sessionId);
 
 const ordersOf = async (cookie: string) => (await reply(await request("/api/orders", { headers: { cookie } }))).data;
+const cartOf = async (cookie: string) => (await reply(await request("/api/cart", { headers: { cookie } }))).data;
+
+/** An ignored event writes nothing: no order, and the cart is as signUpWithCart left it. */
+async function expectNothingWritten(cookie: string) {
+  expect(await ordersOf(cookie)).toHaveLength(0);
+  expect(await cartOf(cookie)).toHaveLength(1);
+}
 
 describe("stripe webhook", () => {
   it("rejects a bad signature", async () => {
@@ -104,28 +111,28 @@ describe("stripe webhook", () => {
     const { cookie } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(completed("", { client_reference_id: null })));
     expect(res.status).toBe(200);
-    expect(await ordersOf(cookie)).toHaveLength(0);
+    await expectNothingWritten(cookie);
   });
 
   it("answers 200 and writes nothing for another event type", async () => {
     const { cookie, userId } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(sessionEvent("checkout.session.expired", { client_reference_id: userId })));
     expect(res.status).toBe(200);
-    expect(await ordersOf(cookie)).toHaveLength(0);
+    await expectNothingWritten(cookie);
   });
 
   it("answers 200 and writes nothing when payment_status is not paid", async () => {
     const { cookie, userId } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(completed(userId, { payment_status: "unpaid" })));
     expect(res.status).toBe(200);
-    expect(await ordersOf(cookie)).toHaveLength(0);
+    await expectNothingWritten(cookie);
   });
 
   it("answers 200 and writes nothing for a session without an items snapshot", async () => {
     const { cookie, userId } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(completed(userId, { metadata: {} })));
     expect(res.status).toBe(200);
-    expect(await ordersOf(cookie)).toHaveLength(0);
+    await expectNothingWritten(cookie);
   });
 
   // The planted bug's other half: fails on main (the route exists), passes on phase-1.

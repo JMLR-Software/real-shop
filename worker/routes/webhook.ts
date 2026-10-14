@@ -37,6 +37,6 @@ webhook.post("/", async (c) => {
   // The write happens before the 200. If it throws, Stripe gets a 500 and retries, and
   // recordOrder's check on the session id makes the retry harmless.
   const outcome = await recordOrder(c.env.DB, userId, session.id, items, amountCents, Date.now());
-  logEvent("order_recorded", { userId, sessionId: session.id, outcome, amountFromStripe: session.amount_total !== null });
+  logEvent("order_recorded", { userId, sessionId: session.id, outcome, amountFromStripe: session.amount_total != null });
   return ok(c, { received: true });
 });

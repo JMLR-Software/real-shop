@@ -22,7 +22,12 @@ upload.post("/", async (c) => {
       .bind(key, c.var.session.user.id, file.name, file.size, file.type, Date.now()).run();
   } catch (err) {
     // No orphans: an object with no row can never be listed or deleted by anyone.
-    await c.env.FILES.delete(key);
+    // The cleanup gets its own catch so a second failure cannot hide the D1 error.
+    try {
+      await c.env.FILES.delete(key);
+    } catch (cleanupErr) {
+      logEvent("upload_orphan", { key, error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr) });
+    }
     throw err;
   }
   logEvent("upload", { userId: c.var.session.user.id, size: file.size, type: file.type });
