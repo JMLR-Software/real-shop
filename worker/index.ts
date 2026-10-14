@@ -7,6 +7,7 @@ import { logEvent } from "./log";
 import { cart_ } from "./routes/cart";
 import { checkout } from "./routes/checkout";
 import { products } from "./routes/products";
+import { files, upload } from "./routes/upload";
 import { webhook } from "./routes/webhook";
 
 const app = new Hono<App>();
@@ -23,6 +24,8 @@ app.get("/api/health", (c) => ok(c, { up: true }));
 app.route("/api/products", products);
 app.route("/api/cart", cart_);
 app.route("/api/checkout", checkout);
+app.route("/api/upload", upload);
+app.route("/api/files", files);
 
 app.get("/api/orders", requireSession, async (c) => {
   const { results } = await c.env.DB.prepare(
