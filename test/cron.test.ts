@@ -1,9 +1,11 @@
-import { env, SELF } from "cloudflare:test";
+import { createExecutionContext, createScheduledController, env, waitOnExecutionContext } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import type { Env } from "../worker/env";
+import worker from "../worker/index";
 import { clearOldCarts, ONE_DAY_MS } from "../worker/jobs/clear-carts";
 
-// SELF's type comes from the default export, which has no `scheduled` on main; the pool still provides it.
-type Scheduled = { scheduled(opts: { cron: string }): Promise<{ outcome: string }> };
+// Typed as the general handler shape so this compiles on main, where the Worker has no `scheduled`.
+const handler: ExportedHandler<Env> = worker;
 
 async function seedCart(email: string, updatedAt: number) {
   await env.DB.prepare(`insert into "user" (id, name, email, emailVerified, createdAt, updatedAt) values (?, 'x', ?, 0, 0, 0)`).bind(email, email).run();
@@ -23,8 +25,10 @@ describe("clearOldCarts", () => {
   // The planted bug: fails on main (no scheduled handler), passes on phase-1.
   it("runs from the Cron Trigger", async () => {
     await seedCart("old@example.com", 0);
-    const result = await (SELF as unknown as Scheduled).scheduled({ cron: "0 3 * * *" });
-    expect(result.outcome).toBe("ok");
+    expect(handler.scheduled, "the Worker exports no scheduled handler").toBeDefined();
+    const ctx = createExecutionContext();
+    await handler.scheduled!(createScheduledController({ cron: "0 3 * * *", scheduledTime: Date.now() }), env as unknown as Env, ctx);
+    await waitOnExecutionContext(ctx);
     const left = await env.DB.prepare(`select count(*) as n from cart_item`).first<{ n: number }>();
     expect(left!.n).toBe(0);
   });
