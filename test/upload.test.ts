@@ -9,6 +9,13 @@ async function signUp() {
   return cookieOf(await request("/api/auth/sign-up/email", json({ name: "x", email: "a@example.com", password: "a-long-enough-password" })));
 }
 
+/** A refused upload must leave nothing behind: no object in R2 and no row in D1. */
+async function expectNothingStored(): Promise<void> {
+  expect((await env.FILES.list()).objects).toHaveLength(0);
+  const rows = await env.DB.prepare(`select count(*) as n from upload`).first<{ n: number }>();
+  expect(rows!.n).toBe(0);
+}
+
 function upload(cookie: string, name: string, type: string, bytes: number): Promise<Response> {
   const form = new FormData();
   form.set("file", new File([new Uint8Array(bytes)], name, { type }));
@@ -24,11 +31,13 @@ describe("upload", () => {
     const res = await upload(await signUp(), "big.png", "image/png", 2 * 1024 * 1024 + 1);
     expect(res.status).toBe(413);
     expect((await reply(res)).error).toBe("That file is over 2 MB");
+    await expectNothingStored();
   });
 
   it("refuses a pdf", async () => {
     const res = await upload(await signUp(), "a.pdf", "application/pdf", 10);
     expect(res.status).toBe(415);
+    await expectNothingStored();
   });
 
   it("stores the file and serves it back with its type", async () => {

@@ -9,7 +9,6 @@ async function signUp(email: string): Promise<string> {
 type Reply = { ok: boolean; data: { productId: string; qty: number }[]; error: string | null };
 const reply = async (res: Response): Promise<Reply> => (await res.json()) as Reply;
 
-// Note: the planted in-memory cart (a module-level Map) survives across the tests in this file.
 describe("cart", () => {
   it("starts empty", async () => {
     const cookie = await signUp("a@example.com");
