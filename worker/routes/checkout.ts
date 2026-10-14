@@ -9,8 +9,6 @@ export const checkout = new Hono<App>();
 checkout.use("*", requireSession);
 
 checkout.post("/", async (c) => {
-  // PLANTED BUG (phase 1): "log everything, we'll need it". The cookie is in there.
-  console.log("checkout request", Object.fromEntries(c.req.raw.headers));
   const userId = c.var.session.user.id;
   const items = await cartLines(c.env.DB, userId);
   if (items.length === 0) return fail(c, "Your cart is empty", 400);
