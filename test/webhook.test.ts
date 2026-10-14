@@ -15,9 +15,9 @@ async function signUpWithCart(email = "a@example.com") {
   return { cookie, userId: user!.id };
 }
 
-function signed(event: object): RequestInit {
+async function signed(event: object): Promise<RequestInit> {
   const payload = JSON.stringify(event);
-  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_WEBHOOK_SECRET });
+  const signature = await stripe.webhooks.generateTestHeaderStringAsync({ payload, secret: env.STRIPE_WEBHOOK_SECRET });
   return { method: "POST", headers: { "stripe-signature": signature, "content-type": "application/json" }, body: payload };
 }
 
@@ -42,7 +42,7 @@ describe("stripe webhook", () => {
   // The planted bug: fails on main (the webhook only logs), passes on phase-1.
   it("writes the order and empties the cart", async () => {
     const { cookie, userId } = await signUpWithCart();
-    const res = await request("/api/stripe/webhook", signed(completed(userId)));
+    const res = await request("/api/stripe/webhook", await signed(completed(userId)));
     expect(res.status).toBe(200);
     const orders = await reply(await request("/api/orders", { headers: { cookie } }));
     expect(orders.data).toHaveLength(1);
@@ -54,8 +54,8 @@ describe("stripe webhook", () => {
   // Stripe retries. Fails on main for the same reason as above.
   it("records the order once when delivered twice", async () => {
     const { cookie, userId } = await signUpWithCart();
-    await request("/api/stripe/webhook", signed(completed(userId)));
-    await request("/api/stripe/webhook", signed(completed(userId)));
+    await request("/api/stripe/webhook", await signed(completed(userId)));
+    await request("/api/stripe/webhook", await signed(completed(userId)));
     const orders = await reply(await request("/api/orders", { headers: { cookie } }));
     expect(orders.data).toHaveLength(1);
   });
