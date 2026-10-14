@@ -17,6 +17,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </header>
         <main className="mx-auto max-w-3xl px-4 pb-16">{children}</main>
+        {/* Cloudflare Web Analytics: free on every plan, no cookies. The token comes from the
+            dashboard (Analytics & Logs → Web Analytics → Add a site); an empty token sends nothing. */}
+        {process.env.NEXT_PUBLIC_CF_BEACON_TOKEN && (
+          <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={`{"token": "${process.env.NEXT_PUBLIC_CF_BEACON_TOKEN}"}`} />
+        )}
       </body>
     </html>
   );
