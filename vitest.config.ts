@@ -17,6 +17,8 @@ export default defineWorkersConfig(async () => {
         workers: {
           wrangler: { configPath: "./wrangler.jsonc" },
           miniflare: {
+            // The pool's bundled workerd supports dates up to 2026-03-10, so tests run on that date; production runs on wrangler.jsonc's.
+            compatibilityDate: "2026-03-10",
             bindings: {
               TEST_MIGRATIONS: migrations,
               BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",

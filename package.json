@@ -10,6 +10,7 @@
     "test": "vitest run --config vitest.unit.config.ts --passWithNoTests && vitest run",
     "test:unit": "vitest run --config vitest.unit.config.ts --passWithNoTests",
     "test:worker": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "smoke": "node scripts/smoke.mjs",
     "db:migrate:local": "wrangler d1 migrations apply hard-three-shop-local --local",

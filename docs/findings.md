@@ -11,3 +11,5 @@ One dated line per surprise: what a doc said versus what happened, a limit hit, 
 - 2026-10-13: Miniflare warns "latest compatibility date supported by the installed Cloudflare Workers Runtime is 2026-03-10, but you've requested 2026-10-01. Falling back" during tests (pool 0.12.21 bundles an older workerd). Harmless; `database_id: "local"` was accepted as is.
 - 2026-10-13: `vitest run` exits 1 on "No test files found", which broke `pnpm test` (unit config is empty until Task 4). Added `--passWithNoTests` to `test` and `test:unit`.
 - 2026-10-13: `res.json()` is `unknown` under vitest 3 types, so the products test casts the body to `{ ok: boolean; data: { id: string }[] }` to typecheck.
+- 2026-10-13: Tests run on compatibility date 2026-03-10 (`miniflare.compatibilityDate` in `vitest.config.ts`) because the pool's bundled workerd supports dates only up to then; production runs on `wrangler.jsonc`'s 2026-10-01. This removes the "falling back" warning.
+- 2026-10-13: The Node `DEP0040` punycode notice in test output comes from a transitive dependency of the deprecated pool; it should vanish when we migrate to `@cloudflare/vitest-plugin`. Scripts left unchanged.

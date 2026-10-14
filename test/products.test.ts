@@ -9,9 +9,21 @@ describe("products", () => {
   });
 
   it("lists the five seeded products", async () => {
-    const body = (await (await request("/api/products")).json()) as { ok: boolean; data: { id: string }[] };
+    const body = (await (await request("/api/products")).json()) as {
+      ok: boolean;
+      data: { id: string; name: string; priceCents: number; blurb: string }[];
+    };
     expect(body.ok).toBe(true);
     expect(body.data.map((p) => p.id)).toEqual(["candle", "wick", "soap", "jar", "matches"]);
+    expect(body.data[0]).toMatchObject({
+      id: "candle",
+      name: "Beeswax candle",
+      priceCents: 1800,
+      blurb: "Burns for forty hours.",
+    });
+    for (const p of body.data) {
+      expect(Number.isInteger(p.priceCents) && p.priceCents > 0).toBe(true);
+    }
   });
 
   it("unknown routes answer 404 in the envelope", async () => {
