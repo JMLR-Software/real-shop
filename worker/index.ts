@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createAuth, requireSession, type App } from "./auth";
 import type { Env } from "./env";
 import { ConfigError, fail, ok } from "./envelope";
+import { clearOldCarts, ONE_DAY_MS } from "./jobs/clear-carts";
 import { logEvent } from "./log";
 import { cart_ } from "./routes/cart";
 import { checkout } from "./routes/checkout";
@@ -17,6 +18,17 @@ app.route("/api/stripe/webhook", webhook);
 
 app.use("/api/*", async (c, next) => {
   c.set("auth", createAuth(c.env));
+  await next();
+});
+
+// PLANTED BUG (phase 1): a timer started on the first request. The copy of the Worker it runs in
+// is gone within seconds, so the cleanup never happens, and no cron dashboard shows it failing.
+let cleanupStarted = false;
+app.use("/api/*", async (c, next) => {
+  if (!cleanupStarted) {
+    cleanupStarted = true;
+    setInterval(() => clearOldCarts(c.env.DB, Date.now()).catch(() => {}), ONE_DAY_MS);
+  }
   await next();
 });
 
