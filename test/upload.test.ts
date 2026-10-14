@@ -49,5 +49,7 @@ describe("upload", () => {
     const object = await env.FILES.get(data.key);
     expect(object).not.toBeNull();
     expect(object!.size).toBe(16);
+    // The Workers pool needs an R2 object's body consumed before the test ends, or storage cannot be released.
+    expect((await object!.arrayBuffer()).byteLength).toBe(16);
   });
 });
