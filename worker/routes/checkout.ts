@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { requireSession, type App } from "../auth";
 import { fail, ok } from "../envelope";
 import { logEvent } from "../log";
+import { cartTotalCents } from "../cart-rules";
 import { cartLines } from "../orders";
 import { stripeFor } from "../stripe";
 
@@ -21,7 +22,10 @@ checkout.post("/", async (c) => {
     })),
     success_url: `${c.env.SITE_URL}/checkout/done/?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${c.env.SITE_URL}/cart/`,
+    // The order is built from this snapshot, not from the cart at delivery time. Stripe caps a metadata value at 500 characters; three products never reach it.
+    metadata: { items: JSON.stringify(items.map(({ productId, qty, priceCents }) => ({ productId, qty, priceCents }))) },
   });
-  logEvent("checkout_started", { userId, sessionId: session.id, amountCents: items.reduce((s, l) => s + l.priceCents * l.qty, 0) });
+  if (!session.url) return fail(c, "Stripe gave no checkout page", 502);
+  logEvent("checkout_started", { userId, sessionId: session.id, amountCents: cartTotalCents(items) });
   return ok(c, { url: session.url });
 });

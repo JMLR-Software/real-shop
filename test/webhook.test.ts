@@ -21,10 +21,20 @@ async function signed(event: object): Promise<RequestInit> {
   return { method: "POST", headers: { "stripe-signature": signature, "content-type": "application/json" }, body: payload };
 }
 
-const completed = (userId: string, sessionId = "cs_test_1") => ({
-  id: "evt_1", object: "event", type: "checkout.session.completed",
-  data: { object: { id: sessionId, object: "checkout.session", client_reference_id: userId, payment_status: "paid" } },
+const CANDLES = JSON.stringify([{ productId: "candle", qty: 2, priceCents: 1800 }]);
+
+type SessionFields = { client_reference_id?: string | null; payment_status?: string; amount_total?: number | null; metadata?: Record<string, string> };
+
+/** A Stripe event as it arrives: the snapshot checkout put in metadata, and what Stripe charged. */
+const sessionEvent = (type: string, fields: SessionFields, sessionId = "cs_test_1") => ({
+  id: "evt_1", object: "event", type,
+  data: { object: { id: sessionId, object: "checkout.session", payment_status: "paid", amount_total: 3600, metadata: { items: CANDLES }, ...fields } },
 });
+
+const completed = (userId: string, fields: SessionFields = {}, sessionId = "cs_test_1") =>
+  sessionEvent("checkout.session.completed", { client_reference_id: userId, ...fields }, sessionId);
+
+const ordersOf = async (cookie: string) => (await reply(await request("/api/orders", { headers: { cookie } }))).data;
 
 describe("stripe webhook", () => {
   it("rejects a bad signature", async () => {
@@ -58,6 +68,64 @@ describe("stripe webhook", () => {
     await request("/api/stripe/webhook", await signed(completed(userId)));
     const orders = await reply(await request("/api/orders", { headers: { cookie } }));
     expect(orders.data).toHaveLength(1);
+  });
+
+  it("records what Stripe charged, not the cart at delivery time", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    await request("/api/cart/candle", { method: "DELETE", headers: { cookie } });
+    await request("/api/cart", json({ productId: "soap", qty: 1 }, cookie));
+    const res = await request("/api/stripe/webhook", await signed(completed(userId, { amount_total: 3650 })));
+    expect(res.status).toBe(200);
+    const orders = await ordersOf(cookie);
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ amountCents: 3650 });
+    const items = await env.DB.prepare(`select productId, qty, priceCents from order_item`).all();
+    expect(items.results).toEqual([{ productId: "candle", qty: 2, priceCents: 1800 }]);
+  });
+
+  it("records the order even when the cart is already empty", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    await env.DB.prepare(`delete from cart_item where userId = ?`).bind(userId).run();
+    const res = await request("/api/stripe/webhook", await signed(completed(userId)));
+    expect(res.status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(1);
+    const items = await env.DB.prepare(`select productId, qty from order_item`).all();
+    expect(items.results).toEqual([{ productId: "candle", qty: 2 }]);
+  });
+
+  it("also records an order when the payment succeeds later", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    const event = sessionEvent("checkout.session.async_payment_succeeded", { client_reference_id: userId });
+    expect((await request("/api/stripe/webhook", await signed(event))).status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(1);
+  });
+
+  it("answers 200 and writes nothing for a session without client_reference_id", async () => {
+    const { cookie } = await signUpWithCart();
+    const res = await request("/api/stripe/webhook", await signed(completed("", { client_reference_id: null })));
+    expect(res.status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(0);
+  });
+
+  it("answers 200 and writes nothing for another event type", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    const res = await request("/api/stripe/webhook", await signed(sessionEvent("checkout.session.expired", { client_reference_id: userId })));
+    expect(res.status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(0);
+  });
+
+  it("answers 200 and writes nothing when payment_status is not paid", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    const res = await request("/api/stripe/webhook", await signed(completed(userId, { payment_status: "unpaid" })));
+    expect(res.status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(0);
+  });
+
+  it("answers 200 and writes nothing for a session without an items snapshot", async () => {
+    const { cookie, userId } = await signUpWithCart();
+    const res = await request("/api/stripe/webhook", await signed(completed(userId, { metadata: {} })));
+    expect(res.status).toBe(200);
+    expect(await ordersOf(cookie)).toHaveLength(0);
   });
 
   // The planted bug's other half: fails on main (the route exists), passes on phase-1.
