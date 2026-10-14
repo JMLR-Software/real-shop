@@ -17,6 +17,9 @@ one room per commit. Tag `phase-0` is the starter the escape plan's lesson 2 mak
 
     pnpm test        # on main this is red on purpose; see the list below
     pnpm e2e         # needs a real Stripe test key in .dev.vars and `pnpm dev` running
+    pnpm smoke [base-url]   # health, sign-up, cart, checkout, then `stripe trigger`; default http://localhost:8787
+
+The end-to-end flow has not yet been run against a live Stripe test key (as of 2026-10-14). It needs `.dev.vars` with `sk_test_` and `whsec_`, `pnpm dev`, and `stripe listen --forward-to localhost:8787/api/stripe/webhook`.
 
 ### Red on `main`, on purpose
 
