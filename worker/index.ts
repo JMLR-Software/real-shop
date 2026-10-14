@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { createAuth, requireSession, type App } from "./auth";
+import { createAuth, type App } from "./auth";
 import type { Env } from "./env";
 import { ConfigError, fail, ok } from "./envelope";
 import { logEvent } from "./log";
+import { cart_ } from "./routes/cart";
 import { products } from "./routes/products";
 
 const app = new Hono<App>();
@@ -15,6 +16,7 @@ app.use("/api/*", async (c, next) => {
 
 app.get("/api/health", (c) => ok(c, { up: true }));
 app.route("/api/products", products);
+app.route("/api/cart", cart_);
 
 // Better Auth's own routes. Every reply is rewrapped into the envelope so the browser never sees its raw body.
 const AUTH_ERRORS: Record<number, string> = {
@@ -43,9 +45,6 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const data = text ? JSON.parse(text) : null;
   return new Response(JSON.stringify({ ok: true, data, error: null }), { status: res.status, headers });
 });
-
-// A placeholder cart so sign-in is testable now; Task 4 replaces it.
-app.get("/api/cart", requireSession, (c) => ok(c, []));
 
 app.notFound((c) => fail(c, "No such route", 404));
 
