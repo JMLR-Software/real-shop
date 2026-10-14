@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createAuth, requireSession, type App } from "./auth";
 import type { Env } from "./env";
 import { ConfigError, fail, ok } from "./envelope";
-import { clearOldCarts, ONE_DAY_MS } from "./jobs/clear-carts";
+import { clearOldCarts } from "./jobs/clear-carts";
 import { logEvent } from "./log";
 import { cart_ } from "./routes/cart";
 import { checkout } from "./routes/checkout";
@@ -20,17 +20,6 @@ app.route("/api/stripe/webhook", webhook);
 // on D1, which a request for an unknown route would leave running after the reply.
 app.use("/api/auth/*", async (c, next) => {
   c.set("auth", createAuth(c.env));
-  await next();
-});
-
-// PLANTED BUG (phase 1): a timer started on the first request. The copy of the Worker it runs in
-// is gone within seconds, so the cleanup never happens, and no cron dashboard shows it failing.
-let cleanupStarted = false;
-app.use("/api/*", async (c, next) => {
-  if (!cleanupStarted) {
-    cleanupStarted = true;
-    setInterval(() => clearOldCarts(c.env.DB, Date.now()).catch(() => {}), ONE_DAY_MS);
-  }
   await next();
 });
 
@@ -89,4 +78,11 @@ app.onError((err, c) => {
 
 export default {
   fetch: app.fetch,
+  // Cloudflare calls this on the schedule in wrangler.jsonc (triggers.crons). A thrown error
+  // shows as a failed run in the dashboard, which is what we want.
+  scheduled: async (_event, env, ctx) => {
+    ctx.waitUntil(
+      clearOldCarts(env.DB, Date.now()).then((n) => logEvent("carts_cleared", { deleted: n })),
+    );
+  },
 } satisfies ExportedHandler<Env>;
