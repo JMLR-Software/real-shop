@@ -7,8 +7,8 @@
     "build": "next build",
     "dev": "pnpm build && wrangler dev --local-upstream localhost:8787",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
-    "test": "vitest run --config vitest.unit.config.ts && vitest run",
-    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test": "vitest run --config vitest.unit.config.ts --passWithNoTests && vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts --passWithNoTests",
     "test:worker": "vitest run",
     "e2e": "playwright test",
     "smoke": "node scripts/smoke.mjs",
@@ -16,19 +16,31 @@
     "db:migrate:staging": "wrangler d1 migrations apply hard-three-shop-staging --remote --env staging",
     "db:migrate:production": "wrangler d1 migrations apply hard-three-shop-production --remote --env production"
   },
-  "pnpm": { "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"] },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  },
   "dependencies": {
+    "hono": "^4.13.13",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.21",
+    "@cloudflare/workers-types": "^5.20261014.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-istanbul": "^3.2.7",
+    "jsonc-parser": "^3.3.1",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^3.2.7",
     "wrangler": "^4.141.0"
   }
 }

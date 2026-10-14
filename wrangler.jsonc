@@ -1,12 +1,26 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "hard-three-shop",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./out",
+    "binding": "ASSETS",
+    // Static files never run the Worker; /api/* always does.
+    "run_worker_first": ["/api/*"],
     // Next.js static export writes 404.html; serve it for unknown paths.
     "not_found_handling": "404-page"
   },
+  // Top level = local dev and tests. Deploys use env.staging / env.production below.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hard-three-shop-local", "database_id": "local", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "hard-three-shop-files-local" }],
+  "triggers": { "crons": ["0 3 * * *"] },
+  "vars": { "BETTER_AUTH_URL": "http://localhost:8787", "SITE_URL": "http://localhost:8787" },
+  // Secrets (wrangler secret put NAME --env <env>; .dev.vars locally):
+  // BETTER_AUTH_SECRET, STRIPE_SECRET_KEY (sk_test_ only), STRIPE_WEBHOOK_SECRET.
   "workers_dev": true,
   "observability": { "enabled": true }
 }

@@ -1,11 +1,22 @@
-import { dollars, site } from "@/content/site";
+"use client";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { dollars, site, type Product } from "@/content/site";
 
 export default function Shop() {
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<Product[]>("/products").then(setProducts).catch((e: Error) => setError(e.message));
+  }, []);
+
   return (
     <>
       <p className="mb-6 text-[color:var(--moss)]">{site.tagline}</p>
+      {error && <p role="alert">{error}</p>}
       <ul className="grid gap-4 sm:grid-cols-2">
-        {site.products.map((p) => (
+        {(products ?? []).map((p) => (
           <li key={p.id} className="rounded border border-black/10 bg-white p-4">
             <h2 className="font-semibold">{p.name}</h2>
             <p className="text-sm">{p.blurb}</p>
