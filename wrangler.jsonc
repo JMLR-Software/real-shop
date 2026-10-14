@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hard-three-shop",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./out",
+    // Next.js static export writes 404.html; serve it for unknown paths.
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": true,
+  "observability": { "enabled": true }
+}

@@ -1,0 +1,4 @@
+# Copy to .dev.vars (gitignored). Values are yours; nothing here is Josh's.
+BETTER_AUTH_SECRET=
+STRIPE_SECRET_KEY=sk_test_
+STRIPE_WEBHOOK_SECRET=whsec_

@@ -1,0 +1,34 @@
+{
+  "name": "hard-three-shop",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "next build",
+    "dev": "pnpm build && wrangler dev --local-upstream localhost:8787",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
+    "test": "vitest run --config vitest.unit.config.ts && vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:worker": "vitest run",
+    "e2e": "playwright test",
+    "smoke": "node scripts/smoke.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply hard-three-shop-local --local",
+    "db:migrate:staging": "wrangler d1 migrations apply hard-three-shop-staging --remote --env staging",
+    "db:migrate:production": "wrangler d1 migrations apply hard-three-shop-production --remote --env production"
+  },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"] },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wrangler": "^4.141.0"
+  }
+}
