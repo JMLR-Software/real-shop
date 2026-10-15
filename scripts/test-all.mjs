@@ -1,5 +1,4 @@
-// main is red on purpose: each room has planted failures, in both halves of the suite.
-// Chaining the halves with && would stop at the first failure and hide the rest, so run
+// Chaining the two halves with && would stop at the first failure and hide the rest, so run
 // both, always, and fail if either failed.
 import { spawnSync } from "node:child_process";
 

@@ -4,7 +4,7 @@ import type { Env } from "../worker/env";
 import worker from "../worker/index";
 import { clearOldCarts, ONE_DAY_MS } from "../worker/jobs/clear-carts";
 
-// Typed as the general handler shape so this compiles on main, where the Worker has no `scheduled`.
+// Typed as the general handler shape, so the test reads `scheduled` like Cloudflare does.
 const handler: ExportedHandler<Env> = worker;
 
 async function seedCart(email: string, updatedAt: number) {
@@ -21,8 +21,6 @@ describe("clearOldCarts", () => {
     const left = await env.DB.prepare(`select userId from cart_item`).all();
     expect(left.results.map((r) => r.userId)).toEqual(["new@example.com"]);
   });
-
-  // The planted bug: fails on main (no scheduled handler), passes on phase-1.
   it("runs from the Cron Trigger", async () => {
     await seedCart("old@example.com", 0);
     expect(handler.scheduled, "the Worker exports no scheduled handler").toBeDefined();

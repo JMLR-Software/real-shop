@@ -55,8 +55,6 @@ describe("stripe webhook", () => {
     const res = await worker.fetch(new Request("http://shop.test/api/stripe/webhook", { method: "POST", body: "{}" }), { ...env, STRIPE_WEBHOOK_SECRET: undefined }, createExecutionContext());
     expect(res.status).toBe(503);
   });
-
-  // The planted bug: fails on main (the webhook only logs), passes on phase-1.
   it("writes the order and empties the cart", async () => {
     const { cookie, userId } = await signUpWithCart();
     const res = await request("/api/stripe/webhook", await signed(completed(userId)));
@@ -68,7 +66,7 @@ describe("stripe webhook", () => {
     expect(cart.data).toEqual([]);
   });
 
-  // Stripe retries. Fails on main for the same reason as above.
+  // Stripe retries a delivery, so the same event can arrive twice.
   it("records the order once when delivered twice", async () => {
     const { cookie, userId } = await signUpWithCart();
     await request("/api/stripe/webhook", await signed(completed(userId)));
@@ -143,8 +141,6 @@ describe("stripe webhook", () => {
     expect(res.status).toBe(200);
     await expectNothingWritten(cookie);
   });
-
-  // The planted bug's other half: fails on main (the route exists), passes on phase-1.
   it("has no route that takes the client's word for a payment", async () => {
     const { cookie } = await signUpWithCart();
     const res = await request("/api/orders/confirm", json({ sessionId: "cs_test_anything" }, cookie));

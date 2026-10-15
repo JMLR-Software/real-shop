@@ -1,10 +1,12 @@
 # real-shop
 
-The practice app for "The hard three" (sign-in, the database, payments), on Cloudflare's free
-plan. `main` is phase 1 **with every planted bug** (tag `phase-1-broken`): the cart forgets, the
-order is written on the redirect, the upload vanishes, the nightly job never runs, the log leaks,
-staging shares production's database, the sign-in secret is never checked. Branch `phase-1` fixes
-one room per commit. Tag `phase-0` is the starter the escape plan's lesson 2 makes.
+A small shop that uses what Cloudflare's free plan offers, end to end: a Next.js site and an API
+in one Worker, sign-in (Better Auth), the database (D1), file uploads (R2), a nightly job (Cron
+Triggers), logs, and Stripe Checkout with its webhook. Staging and production each have their own
+database and bucket. The courses take their examples from it.
+
+A copy with a bug planted in each feature, for a possible fix-it exercise, is parked on the
+`practice` branch.
 
 ## Run it
 
@@ -15,7 +17,7 @@ one room per commit. Tag `phase-0` is the starter the escape plan's lesson 2 mak
 
 ## Test it
 
-    pnpm test        # on main this is red on purpose; see the list below
+    pnpm test        # unit tests, then the Worker tests in Cloudflare's runtime
     pnpm e2e         # the whole flow in a browser, through Stripe's test card; needs the two lines below
     pnpm smoke [base-url]   # health, sign-up, cart, checkout, a triggered payment, the order; default http://localhost:8787
 
@@ -40,24 +42,7 @@ then `E2E_URL=http://localhost:8799 pnpm e2e` and `pnpm smoke http://localhost:8
 Last green run against live Stripe: 2026-10-14. Stripe's hosted page changes; if `pnpm e2e` stops
 at the card form, the field ids in `e2e/checkout.spec.ts` are the first thing to check.
 
-### Red on `main`, on purpose
-
-Each line is a planted bug. The `phase-1` branch fixes them, one commit per bug.
-
-- auth: `refuses to run without BETTER_AUTH_SECRET`
-- cart: `is one cart per person`
-- cart-actions (unit): `does not say Added when the API failed`
-- checkout: `makes a Stripe Checkout session from the cart and returns its url`
-- webhook: `writes the order and empties the cart`
-- webhook: `records the order once when delivered twice`
-- webhook: `has no route that takes the client's word for a payment`
-- upload: `puts the bytes in R2`
-- cron: `runs from the Cron Trigger`
-- log: `never writes the session cookie to the log`
-- wrangler-envs (unit): `gives each environment its own database and bucket`
-
-Deploys: GitHub Actions, on push. `main` → production (the broken shop readers fork);
-`phase-1` → staging (the fixed shop).
+Deploys: GitHub Actions, on push, after the tests pass. `main` → production; `staging` → staging.
 
 ### Set it up once, on your own accounts
 
@@ -79,8 +64,7 @@ Deploys: GitHub Actions, on push. `main` → production (the broken shop readers
        pnpm exec wrangler secret put STRIPE_SECRET_KEY --env staging     # sk_test_ only
        # the same two with --env production
 
-   The first `secret put` offers to create the Worker: answer yes. Only `phase-1` deploys
-   staging, so on `main` the staging steps can wait.
+   The first `secret put` offers to create the Worker: answer yes.
 
 5. Push. Then in Stripe (test mode), Workbench, Webhooks (event destinations): one endpoint per environment,
    `https://<your address>/api/stripe/webhook`, event `checkout.session.completed`. Put each

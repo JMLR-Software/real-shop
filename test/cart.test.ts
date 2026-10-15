@@ -38,8 +38,6 @@ describe("cart", () => {
     const res = await request("/api/cart", json({ productId: "unicorn", qty: 1 }, cookie));
     expect(res.status).toBe(404);
   });
-
-  // The planted bug: fails on main (one cart for everyone), passes on phase-1.
   it("is one cart per person", async () => {
     const ada = await signUp("ada@example.com");
     const bob = await signUp("bob@example.com");

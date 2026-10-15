@@ -51,8 +51,6 @@ describe("upload", () => {
     expect(back.headers.get("content-type")).toBe("image/png");
     expect((await back.arrayBuffer()).byteLength).toBe(16);
   });
-
-  // The planted bug: fails on main (the bytes are in a Map, not in R2), passes on phase-1.
   it("puts the bytes in R2", async () => {
     const { data } = await reply(await upload(await signUp(), "receipt.png", "image/png", 16));
     const object = await env.FILES.get(data.key);
