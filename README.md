@@ -49,7 +49,7 @@ Deploys: GitHub Actions, on push. `main` → production (the broken shop readers
        pnpm exec wrangler r2 bucket create real-shop-files-production
 
 3. A Cloudflare API token for GitHub Actions: My Profile, API Tokens, the "Edit Cloudflare
-   Workers" template, plus D1 Edit. Save it and your account id (`pnpm exec wrangler whoami`) as
+   Workers" template, plus D1 Edit, and for a custom domain Zone Read and DNS Edit on that zone. Save it and your account id (`pnpm exec wrangler whoami`) as
    the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 4. Secrets on each Worker, a different `BETTER_AUTH_SECRET` for each (`openssl rand -base64 32`):
 
@@ -57,9 +57,14 @@ Deploys: GitHub Actions, on push. `main` → production (the broken shop readers
        pnpm exec wrangler secret put STRIPE_SECRET_KEY --env staging     # sk_test_ only
        # the same two with --env production
 
-5. Push. Then in Stripe (test mode), Developers, Webhooks: one endpoint per environment,
+   The first `secret put` offers to create the Worker: answer yes. Only `phase-1` deploys
+   staging, so on `main` the staging steps can wait.
+
+5. Push. Then in Stripe (test mode), Workbench, Webhooks (event destinations): one endpoint per environment,
    `https://<your address>/api/stripe/webhook`, event `checkout.session.completed`. Put each
    endpoint's signing secret in with `wrangler secret put STRIPE_WEBHOOK_SECRET --env <env>`.
 
 Production answers on the custom domain in `wrangler.jsonc`'s `routes`. Change it to a domain on
-your own Cloudflare account, or delete `routes` and set `workers_dev` to true.
+your own Cloudflare account, or delete `routes` and set `workers_dev` to true. Then change
+`BETTER_AUTH_URL` and `SITE_URL` in both environments to your own addresses (staging lives on
+your account's `workers.dev` subdomain). Sign-in and Stripe's return pages use them.
