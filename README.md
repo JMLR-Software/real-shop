@@ -36,3 +36,30 @@ Each line is a planted bug. The `phase-1` branch fixes them, one commit per bug.
 
 Deploys: GitHub Actions, on push. `main` → production (the broken shop readers fork);
 `phase-1` → staging (the fixed shop).
+
+### Set it up once, on your own accounts
+
+1. Cloudflare dashboard: turn on R2 (R2 Object Storage, then enable). It asks for a payment
+   method even on the free plan. Until then every R2 command fails with code 10042.
+2. Make the databases and buckets, then paste the two `database_id` values into `wrangler.jsonc`:
+
+       pnpm exec wrangler d1 create real-shop-staging
+       pnpm exec wrangler d1 create real-shop-production
+       pnpm exec wrangler r2 bucket create real-shop-files-staging
+       pnpm exec wrangler r2 bucket create real-shop-files-production
+
+3. A Cloudflare API token for GitHub Actions: My Profile, API Tokens, the "Edit Cloudflare
+   Workers" template, plus D1 Edit. Save it and your account id (`pnpm exec wrangler whoami`) as
+   the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+4. Secrets on each Worker, a different `BETTER_AUTH_SECRET` for each (`openssl rand -base64 32`):
+
+       pnpm exec wrangler secret put BETTER_AUTH_SECRET --env staging
+       pnpm exec wrangler secret put STRIPE_SECRET_KEY --env staging     # sk_test_ only
+       # the same two with --env production
+
+5. Push. Then in Stripe (test mode), Developers, Webhooks: one endpoint per environment,
+   `https://<your address>/api/stripe/webhook`, event `checkout.session.completed`. Put each
+   endpoint's signing secret in with `wrangler secret put STRIPE_WEBHOOK_SECRET --env <env>`.
+
+Production answers on the custom domain in `wrangler.jsonc`'s `routes`. Change it to a domain on
+your own Cloudflare account, or delete `routes` and set `workers_dev` to true.
