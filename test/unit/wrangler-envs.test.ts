@@ -12,8 +12,6 @@ describe("wrangler environments", () => {
   it("has staging and production", () => {
     expect(Object.keys(cfg.env).sort()).toEqual(["production", "staging"]);
   });
-
-  // The planted bug: fails on main, passes on phase-1.
   it("gives each environment its own database and bucket", () => {
     const s = cfg.env.staging, p = cfg.env.production;
     expect(s.d1_databases[0].database_id).not.toBe(p.d1_databases[0].database_id);

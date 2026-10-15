@@ -6,10 +6,6 @@ import { logEvent } from "../log";
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp"]);
 
-// PLANTED BUG (phase 1): "the disk". Bytes kept here are gone when this copy of the Worker
-// restarts, and another copy never had them. Files go in R2.
-const disk = new Map<string, { type: string; bytes: ArrayBuffer }>();
-
 export const upload = new Hono<App>();
 upload.use("*", requireSession);
 
@@ -20,9 +16,20 @@ upload.post("/", async (c) => {
   if (!ALLOWED.has(file.type)) return fail(c, "Only png, jpeg or webp", 415);
   if (file.size > MAX_UPLOAD_BYTES) return fail(c, "That file is over 2 MB", 413);
   const key = `${c.var.session.user.id}/${crypto.randomUUID()}`;
-  disk.set(key, { type: file.type, bytes: await file.arrayBuffer() });
-  await c.env.DB.prepare(`insert into upload (key, userId, name, size, type, createdAt) values (?, ?, ?, ?, ?, ?)`)
-    .bind(key, c.var.session.user.id, file.name, file.size, file.type, Date.now()).run();
+  await c.env.FILES.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
+  try {
+    await c.env.DB.prepare(`insert into upload (key, userId, name, size, type, createdAt) values (?, ?, ?, ?, ?, ?)`)
+      .bind(key, c.var.session.user.id, file.name, file.size, file.type, Date.now()).run();
+  } catch (err) {
+    // No orphans: an object with no row can never be listed or deleted by anyone.
+    // The cleanup gets its own catch so a second failure cannot hide the D1 error.
+    try {
+      await c.env.FILES.delete(key);
+    } catch (cleanupErr) {
+      logEvent("upload_orphan", { key, error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr) });
+    }
+    throw err;
+  }
   logEvent("upload", { userId: c.var.session.user.id, size: file.size, type: file.type });
   return ok(c, { key, name: file.name, size: file.size, type: file.type }, 201);
 });
@@ -33,7 +40,13 @@ files.use("*", requireSession);
 files.get("/:userId/:id", async (c) => {
   const key = `${c.req.param("userId")}/${c.req.param("id")}`;
   if (c.req.param("userId") !== c.var.session.user.id) return fail(c, "Not your file", 403);
-  const hit = disk.get(key);
-  if (!hit) return fail(c, "No such file", 404);
-  return new Response(hit.bytes, { headers: { "content-type": hit.type } });
+  const object = await c.env.FILES.get(key);
+  if (!object) return fail(c, "No such file", 404);
+  return new Response(object.body, {
+    headers: {
+      "content-type": object.httpMetadata?.contentType ?? "application/octet-stream",
+      "x-content-type-options": "nosniff",
+      "cache-control": "private",
+    },
+  });
 });

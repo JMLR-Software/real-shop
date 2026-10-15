@@ -25,10 +25,8 @@
   "observability": { "enabled": true },
   "env": {
     "staging": {
-      // PLANTED BUG (phase 1): staging and production share one database and one bucket.
-      // A test order on staging shows up in the real shop's orders.
-      "d1_databases": [{ "binding": "DB", "database_name": "real-shop-production", "database_id": "dba14e3f-59fc-43e8-bd04-1acb74164fe1", "migrations_dir": "migrations" }],
-      "r2_buckets": [{ "binding": "FILES", "bucket_name": "real-shop-files-production" }],
+      "d1_databases": [{ "binding": "DB", "database_name": "real-shop-staging", "database_id": "4df85200-e0ed-497d-b2da-ed36b10c703f", "migrations_dir": "migrations" }],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "real-shop-files-staging" }],
       "vars": { "BETTER_AUTH_URL": "https://real-shop-staging.jyi468.workers.dev", "SITE_URL": "https://real-shop-staging.jyi468.workers.dev" },
       "workers_dev": true
     },

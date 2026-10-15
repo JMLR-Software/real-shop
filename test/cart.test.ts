@@ -9,7 +9,6 @@ async function signUp(email: string): Promise<string> {
 type Reply = { ok: boolean; data: { productId: string; qty: number }[]; error: string | null };
 const reply = async (res: Response): Promise<Reply> => (await res.json()) as Reply;
 
-// Note: the planted in-memory cart (a module-level Map) survives across the tests in this file.
 describe("cart", () => {
   it("starts empty", async () => {
     const cookie = await signUp("a@example.com");
@@ -39,8 +38,6 @@ describe("cart", () => {
     const res = await request("/api/cart", json({ productId: "unicorn", qty: 1 }, cookie));
     expect(res.status).toBe(404);
   });
-
-  // The planted bug: fails on main (one cart for everyone), passes on phase-1.
   it("is one cart per person", async () => {
     const ada = await signUp("ada@example.com");
     const bob = await signUp("bob@example.com");
