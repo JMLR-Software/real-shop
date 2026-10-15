@@ -1,11 +1,11 @@
 type Deps = { api: (productId: string) => Promise<unknown>; setStatus: (s: string) => void };
 
-// PLANTED BUG (phase 1): the tick shows before the server has answered. If the write fails,
-// the shopper has seen "Added" and the cart is empty.
+/** Says "Added" only after the server said so. A failure shows its message, not a tick. */
 export async function addToCart({ api, setStatus }: Deps, productId: string): Promise<void> {
-  setStatus("Added");
+  setStatus("Adding…");
   try {
     await api(productId);
+    setStatus("Added");
   } catch (e) {
     setStatus((e as Error).message);
   }

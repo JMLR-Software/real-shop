@@ -52,8 +52,6 @@ describe("sign-in", () => {
     const res = await request("/api/cart", { headers: { cookie } });
     expect(res.status).toBe(401);
   });
-
-  // The planted bug: fails on main, passes on phase-1.
   it("refuses to run without BETTER_AUTH_SECRET", async () => {
     const ctx = createExecutionContext();
     const res = await worker.fetch(

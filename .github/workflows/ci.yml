@@ -1,10 +1,10 @@
 # Tests gate the deploy, and the branch picks the environment:
-#   main    -> production (phase 1 with every planted bug; readers fork it)
-#   phase-1 -> staging    (the fixed shop)
+#   main    -> production
+#   staging -> staging
 name: ci
 on:
   push:
-    branches: [main, phase-1]
+    branches: [main, staging]
   pull_request:
 # An expression inside a flow mapping ({ ... }) is not valid YAML, so these stay in block style.
 concurrency:
@@ -14,8 +14,6 @@ permissions: { contents: read }
 
 jobs:
   test:
-    # main is red on purpose (the planted bugs); only phase-1 and PRs must be green.
-    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -30,9 +28,8 @@ jobs:
 
   deploy:
     needs: [test]
-    # A push deploys. On main the test job is skipped, so "skipped" counts as a pass there;
-    # a red phase-1 never reaches staging.
-    if: ${{ !cancelled() && github.event_name == 'push' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    # A push deploys, only after the tests pass.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -28,10 +28,23 @@ describe("checkout", () => {
 
   it("makes a Stripe Checkout session from the cart and returns its url", async () => {
     const cookie = await signUpWithCart();
+    let sent = "";
     fetchMock.get("https://api.stripe.com").intercept({ path: "/v1/checkout/sessions", method: "POST" })
-      .reply(200, { id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" });
+      .reply(200, (opts) => { sent = String(opts.body); return { id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" }; });
     const res = await request("/api/checkout", json({}, cookie));
     expect(res.status).toBe(200);
     expect((await reply(res)).data).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_1" });
+    // The snapshot the webhook will build the order from.
+    const items = new URLSearchParams(sent).get("metadata[items]");
+    expect(JSON.parse(items!)).toEqual([{ productId: "candle", qty: 2, priceCents: 1800 }]);
+  });
+
+  it("is a 502 when Stripe gives no checkout page", async () => {
+    const cookie = await signUpWithCart();
+    fetchMock.get("https://api.stripe.com").intercept({ path: "/v1/checkout/sessions", method: "POST" })
+      .reply(200, { id: "cs_test_2", url: null });
+    const res = await request("/api/checkout", json({}, cookie));
+    expect(res.status).toBe(502);
+    expect((await reply(res)).error).toBe("Stripe gave no checkout page");
   });
 });

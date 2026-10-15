@@ -5,8 +5,6 @@ import { cookieOf, json, request } from "./helpers";
 describe("logs", () => {
   beforeAll(() => { fetchMock.activate(); fetchMock.disableNetConnect(); });
   afterEach(() => { vi.restoreAllMocks(); fetchMock.assertNoPendingInterceptors(); });
-
-  // The planted bug: fails on main, passes on phase-1.
   it("never writes the session cookie to the log", async () => {
     const cookie = cookieOf(await request("/api/auth/sign-up/email", json({ name: "x", email: "a@example.com", password: "a-long-enough-password" })));
     await request("/api/cart", json({ productId: "candle", qty: 1 }, cookie));
