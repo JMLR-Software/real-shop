@@ -1,7 +1,11 @@
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { defineWorkersConfig, readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersConfig(async () => {
+  // wrangler.jsonc serves the site from out/, and the pool refuses to start if it is missing.
+  // The tests never fetch the site, so an empty folder is enough; a fresh clone need not build first.
+  mkdirSync(path.join(__dirname, "out"), { recursive: true });
   const migrations = await readD1Migrations(path.join(__dirname, "migrations"));
   return {
     test: {
