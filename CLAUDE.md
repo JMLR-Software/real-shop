@@ -1,4 +1,4 @@
-# hard-three-shop
+# real-shop
 
 A small shop on Cloudflare Workers: a Next.js static site in `src/`, an API in `worker/`, the
 database in D1, files in R2. The practice app for the bridge's paid courses.

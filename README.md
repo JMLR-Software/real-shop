@@ -1,4 +1,4 @@
-# hard-three-shop
+# real-shop
 
 The practice app for "The hard three" (sign-in, the database, payments), on Cloudflare's free
 plan. `main` is phase 1 **with every planted bug** (tag `phase-1-broken`): the cart forgets, the

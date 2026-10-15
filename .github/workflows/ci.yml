@@ -51,5 +51,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          pnpm exec wrangler d1 migrations apply "hard-three-shop-$WRANGLER_ENV" --remote --env "$WRANGLER_ENV"
+          pnpm exec wrangler d1 migrations apply DB --remote --env "$WRANGLER_ENV"
           pnpm exec wrangler deploy --env "$WRANGLER_ENV"
